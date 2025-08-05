@@ -1,0 +1,53 @@
+
+name: Deploy to Heroku
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Frontend Dependencies
+        run: npm install
+        working-directory: ./mass-tracker-frontend
+
+      - name: Build Frontend
+        run: npm run build
+        working-directory: ./mass-tracker-frontend
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Backend Dependencies
+        run: pip install -r mass_tracker_backend/requirements.txt
+        working-directory: ./mass_tracker_backend
+
+      - name: Deploy to Heroku
+        uses: akhileshns/heroku-deploy@v3.12.12
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }} # Replace with your Heroku app name
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          procfile: web: gunicorn mass_tracker_backend.wsgi --log-file -
+          appdir: mass_tracker_backend
+
+      - name: Run Migrations on Heroku
+        run: heroku run python mass_tracker_backend/manage.py migrate --app ${{ secrets.HEROKU_APP_NAME }}
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+
+
+
